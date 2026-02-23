@@ -8,33 +8,33 @@ WiFiServer server(80);
 ArduinoLEDMatrix matrix;
 Servo myServo;
 
-// Configuration pour la lecture de tension
+// Configuration for voltage reading
 const int ADC_MAX = 1023;
 const float VREF = 4.66;
 
-// Configuration du servo
+// Servo configuration
 const int SERVO_PIN = 9;
 const int SERVO_MIN_ANGLE = 0;
 const int SERVO_MAX_ANGLE = 180;
 
-// Configuration de la LED
+// LED configuration
 const int LED_PIN = 2;
 
 void setup() {
   Serial.begin(115200);
   delay(2000);
 
-  // Configuration ADC en 10 bits
+  // Configure ADC to 10 bits
   analogReadResolution(10);
 
-  // Initialiser la LED rouge
+  // Initialize the red LED
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  // Initialiser la matrice LED
+  // Initialize the LED matrix
   matrix.begin();
 
-  // Initialiser le servo
+  // Initialize the servo
   myServo.attach(SERVO_PIN);
   myServo.write(SERVO_MIN_ANGLE);
 
@@ -43,11 +43,11 @@ void setup() {
   Serial.println(WiFi.firmwareVersion());
 
   if (WiFi.status() == WL_NO_MODULE) {
-    Serial.println("ERREUR: module Wi-Fi non detecte.");
+    Serial.println("ERROR: Wi-Fi module not detected.");
     while (true) {}
   }
 
-  Serial.print("Connexion a: ");
+  Serial.print("Connecting to: ");
   Serial.println(ssid);
 
   int status = WiFi.begin(ssid, pass);
@@ -61,12 +61,12 @@ void setup() {
   Serial.println();
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("OK: connecte !");
+    Serial.println("OK: connected!");
     Serial.print("RSSI: ");
     Serial.println(WiFi.RSSI());
 
-    // Attendre l'attribution d'une IP par DHCP
-    Serial.print("Attente IP DHCP");
+    // Wait for DHCP IP assignment
+    Serial.print("Waiting for DHCP IP");
     int ipRetries = 0;
     while (WiFi.localIP() == IPAddress(0, 0, 0, 0) && ipRetries < 10) {
       delay(1000);
@@ -76,20 +76,20 @@ void setup() {
     Serial.println();
 
     if (WiFi.localIP() != IPAddress(0, 0, 0, 0)) {
-      Serial.print("IP obtenue: ");
+      Serial.print("IP obtained: ");
       Serial.println(WiFi.localIP());
 
-      // Démarrer le serveur web
+      // Start the web server
       server.begin();
-      Serial.println("Serveur HTTP demarre sur port 80");
-      Serial.print("Ouvrez http://");
+      Serial.println("HTTP server started on port 80");
+      Serial.print("Open http://");
       Serial.println(WiFi.localIP());
     } else {
-      Serial.println("ERREUR: Pas d'IP apres 10s");
-      Serial.println("Verifiez le serveur DHCP du routeur");
+      Serial.println("ERROR: No IP after 10s");
+      Serial.println("Check the router's DHCP server");
     }
   } else {
-    Serial.print("ECHEC, status = ");
+    Serial.print("FAILED, status = ");
     Serial.println(WiFi.status());
   }
 }
@@ -101,7 +101,7 @@ float readVoltage() {
 }
 
 int voltageToServoAngle(float voltage) {
-  // Mapper la tension (0-VREF) vers l'angle du servo (min-max)
+  // Map voltage (0-VREF) to servo angle (min-max)
   int angle = map((int)(voltage * 100), 0, (int)(VREF * 100), SERVO_MIN_ANGLE, SERVO_MAX_ANGLE);
   angle = constrain(angle, SERVO_MIN_ANGLE, SERVO_MAX_ANGLE);
   return angle;
@@ -118,7 +118,7 @@ void updateLEDMatrix(float voltage) {
 }
 
 void loop() {
-  // Clignotement de la LED rouge toutes les 167ms (six fois plus vite que l'origine)
+  // Red LED blink every 167ms (six times faster than original)
   static unsigned long lastLedToggle = 0;
   static bool ledState = false;
 
@@ -128,11 +128,11 @@ void loop() {
     lastLedToggle = millis();
   }
 
-  // Lire et afficher la tension sur la matrice LED et contrôler le servo
+  // Read and display voltage on LED matrix and control the servo
   static unsigned long lastUpdate = 0;
   static unsigned long lastReset = 0;
 
-  // Lecture continue de la tension
+  // Continuous voltage reading
   if (millis() - lastUpdate > 500) {
     float voltage = readVoltage();
     int servoAngle = voltageToServoAngle(voltage);
@@ -149,19 +149,19 @@ void loop() {
     lastUpdate = millis();
   }
 
-  // Retour à 0 toutes les 3 secondes
+  // Reset to 0 every 3 seconds
   if (millis() - lastReset > 3000) {
     float voltage = readVoltage();
     int targetAngle = voltageToServoAngle(voltage);
 
-    // Aller à 0
+    // Go to 0
     myServo.write(0);
-    Serial.println("Servo: RESET a 0 deg");
+    Serial.println("Servo: RESET to 0 deg");
     delay(500);
 
-    // Retourner à l'angle de consigne
+    // Return to target angle
     myServo.write(targetAngle);
-    Serial.print("Servo: retour a l'angle de consigne ");
+    Serial.print("Servo: return to target angle ");
     Serial.print(targetAngle);
     Serial.println(" deg");
 
@@ -171,15 +171,15 @@ void loop() {
   WiFiClient client = server.available();
 
   if (client) {
-    Serial.println("Nouveau client connecte!");
+    Serial.println("New client connected!");
 
-    // Attendre que des données soient disponibles
+    // Wait for data to be available
     unsigned long timeout = millis();
     while (client.connected() && !client.available() && millis() - timeout < 3000) {
       delay(1);
     }
 
-    // Lire la première ligne de la requête
+    // Read the first line of the request
     String currentLine = "";
     bool requestComplete = false;
 
@@ -188,7 +188,7 @@ void loop() {
         char c = client.read();
         if (c == '\n') {
           if (currentLine.length() == 0) {
-            // Double retour à la ligne = fin des headers
+            // Double newline = end of headers
             requestComplete = true;
             break;
           }
@@ -199,22 +199,22 @@ void loop() {
       }
     }
 
-    // Lire la tension et calculer l'angle du servo
+    // Read voltage and calculate servo angle
     float voltage = readVoltage();
     int servoAngle = voltageToServoAngle(voltage);
 
-    // Envoyer la réponse HTTP
+    // Send the HTTP response
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: text/html; charset=utf-8");
     client.println("Connection: close");
     client.println();
 
-    // Page HTML
+    // HTML page
     client.println("<!DOCTYPE html>");
     client.println("<html><head>");
     client.println("<meta name='viewport' content='width=device-width, initial-scale=1'>");
     client.println("<meta http-equiv='refresh' content='1'>");
-    client.println("<title>Tension A0</title>");
+    client.println("<title>Voltage A0</title>");
     client.println("<style>");
     client.println("body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }");
     client.println(".container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }");
@@ -226,24 +226,24 @@ void loop() {
     client.println("</style>");
     client.println("</head><body>");
     client.println("<div class='container'>");
-    client.println("<h1>Mesures Arduino</h1>");
-    client.println("<div class='label'>TENSION (A0)</div>");
+    client.println("<h1>Arduino Readings</h1>");
+    client.println("<div class='label'>VOLTAGE (A0)</div>");
     client.print("<div class='voltage'>");
     client.print(voltage, 2);
     client.println(" V</div>");
-    client.println("<div class='label'>ANGLE SERVO</div>");
+    client.println("<div class='label'>SERVO ANGLE</div>");
     client.print("<div class='servo'>");
     client.print(servoAngle);
     client.println(" &deg;</div>");
-    client.println("<div class='info'>Actualisation automatique: 1 seconde</div>");
+    client.println("<div class='info'>Auto refresh: 1 second</div>");
     client.println("</div>");
     client.println("</body></html>");
 
-    // Petite pause pour que le client reçoive toutes les données
+    // Small delay to let the client receive all data
     delay(1);
     client.stop();
 
-    Serial.print("Reponse envoyee - Voltage: ");
+    Serial.print("Response sent - Voltage: ");
     Serial.print(voltage, 2);
     Serial.print(" V | Servo: ");
     Serial.print(servoAngle);
